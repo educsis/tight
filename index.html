@@ -94,7 +94,7 @@
 <body>
 
   <div id="score">Puntos: 0</div>
-  <div id="gameOver">💀 ¡Juego terminado!<br/>Puntaje final: <span id="finalScore">0</span></div>
+  <div id="gameOver">💀<br/><span id="finalScore">0</span></div>
   <button id="restartBtn">Reintentar</button>
   <button id="touchBtn">TOCAR 🦄</button>
   <div id="rotateWarning">Por favor gira tu dispositivo<br>para jugar en modo horizontal 🌈</div>
@@ -161,10 +161,14 @@
         },
         draw() {
           this.update();
+          ctx.save();
+          ctx.translate(this.x, this.y);
+          ctx.scale(-1, 1); // ← Flip horizontal SIEMPRE para que mire a la derecha
           ctx.font = `${EMOJI_SIZE}px serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText("🦄", this.x, this.y);
+          ctx.fillText("🦄", 0, 0);
+          ctx.restore();
         }
       };
 
@@ -301,7 +305,7 @@
     setInterval(() => { if (!gameOver) spawnEnemy(); }, 1200);
     setInterval(() => { if (!gameOver) spawnCoin(); }, 1500);
 
-    // ✅ Bloquear doble tap zoom real
+    // ✅ Prevenir zoom por doble tap
     let lastTouch = 0;
     document.addEventListener('touchstart', function(e) {
       const now = new Date().getTime();
