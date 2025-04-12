@@ -346,7 +346,7 @@ restartBtn.addEventListener('click', async () => {
   const score = parseInt(finalScoreEl.textContent);
 
   // Consultar puntaje existente del jugador
-  let existing = await fetch(base + `obtener_puntaje.php?name=${encodeURIComponent(name)}`)
+  let existing = await fetch(`https://chispudos.com/ardillas/obtener_puntaje.php?name=${encodeURIComponent(name)}`)
     .then(r => r.ok ? r.json() : null)
     .catch(() => null);
 
