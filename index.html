@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Unicornio Equilibrista</title>
+  <title>Ardilla Equilibrista</title>
   <style>
     html, body {
       margin: 0;
@@ -13,13 +13,11 @@
       background: #87CEFA;
       font-family: sans-serif;
     }
-
     canvas {
       display: block;
       margin: auto;
       background: transparent;
     }
-
     #score {
       position: absolute;
       top: 10px;
@@ -29,7 +27,6 @@
       font-weight: bold;
       z-index: 2;
     }
-
     #gameOver {
       position: absolute;
       top: 50%;
@@ -41,7 +38,6 @@
       display: none;
       z-index: 3;
     }
-
     #restartBtn {
       position: absolute;
       top: calc(50% + 60px);
@@ -57,7 +53,6 @@
       display: none;
       z-index: 4;
     }
-
     #touchBtn {
       position: absolute;
       bottom: 20px;
@@ -72,7 +67,6 @@
       border: none;
       z-index: 5;
     }
-
     #rotateWarning {
       display: none;
       position: fixed;
@@ -92,12 +86,11 @@
   </style>
 </head>
 <body>
-
   <div id="score">Puntos: 0</div>
-  <div id="gameOver">💀<br/><span id="finalScore">0</span></div>
+  <div id="gameOver">🐶<br/><span id="finalScore">0</span></div>
   <button id="restartBtn">Reintentar</button>
-  <button id="touchBtn">TOCAR 🦄</button>
-  <div id="rotateWarning">Por favor gira tu dispositivo<br>para jugar en modo horizontal 🌈</div>
+  <button id="touchBtn">TOCAR 🐿️</button>
+  <div id="rotateWarning">Por favor gira tu dispositivo<br>para jugar en modo horizontal 🌰</div>
   <canvas id="game"></canvas>
 
   <audio id="bgm" src="race.mp3" loop></audio>
@@ -120,6 +113,7 @@
 
     let soundStarted = false;
     const EMOJI_SIZE = 64;
+    const SMALL_SIZE = 48; // nueces y enemigos
     let ROPE_Y, PLAYER_X;
     let score, speed, enemies, coins, gameOver, player;
 
@@ -128,7 +122,6 @@
       canvas.height = window.innerHeight;
       ROPE_Y = canvas.height / 2;
       PLAYER_X = canvas.width * 0.15;
-
       rotateWarning.style.display =
         window.innerHeight > window.innerWidth ? 'flex' : 'none';
     }
@@ -163,11 +156,11 @@
           this.update();
           ctx.save();
           ctx.translate(this.x, this.y);
-          ctx.scale(-1, 1); // ← Flip horizontal SIEMPRE para que mire a la derecha
+          ctx.scale(-1, this.flipped ? -1 : 1); // horizontal fijo + flip vertical
           ctx.font = `${EMOJI_SIZE}px serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText("🦄", 0, 0);
+          ctx.fillText("🐿️", 0, 0);
           ctx.restore();
         }
       };
@@ -198,7 +191,7 @@
       const fromTop = Math.random() < 0.5;
       enemies.push({
         x: canvas.width,
-        y: fromTop ? ROPE_Y - EMOJI_SIZE : ROPE_Y + EMOJI_SIZE,
+        y: fromTop ? ROPE_Y - SMALL_SIZE : ROPE_Y + SMALL_SIZE,
         fromTop,
         passed: false
       });
@@ -206,14 +199,12 @@
 
     function spawnCoin() {
       const flipped = Math.random() < 0.5;
-      const y = flipped ? ROPE_Y + EMOJI_SIZE : ROPE_Y - EMOJI_SIZE;
-
+      const y = flipped ? ROPE_Y + SMALL_SIZE : ROPE_Y - SMALL_SIZE;
       const safeDistance = 80;
       const tooClose = enemies.some(enemy =>
         Math.abs(enemy.x - canvas.width) < safeDistance &&
         Math.abs(enemy.y - y) < safeDistance
       );
-
       if (!tooClose) {
         coins.push({
           x: canvas.width,
@@ -253,25 +244,21 @@
 
     function updateGame() {
       if (gameOver) return;
-
       ctx.fillStyle = '#87CEFA';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
       drawRope();
       player.draw();
 
       enemies.forEach(enemy => {
         enemy.x -= speed;
-        drawEmoji("💀", enemy.x, enemy.y, EMOJI_SIZE);
-
+        drawEmoji("🐶", enemy.x, enemy.y, SMALL_SIZE);
         if (
           Math.abs(enemy.x - player.x) < 32 &&
           ((enemy.fromTop && !player.flipped) || (!enemy.fromTop && player.flipped))
         ) {
           endGame();
         }
-
-        if (!enemy.passed && enemy.x + EMOJI_SIZE < player.x) {
+        if (!enemy.passed && enemy.x + SMALL_SIZE < player.x) {
           score += 1;
           enemy.passed = true;
         }
@@ -279,8 +266,7 @@
 
       coins.forEach(coin => {
         coin.x -= speed;
-        drawEmoji("⭐", coin.x, coin.y, EMOJI_SIZE);
-
+        drawEmoji("🌰", coin.x, coin.y, SMALL_SIZE);
         if (
           !coin.collected &&
           Math.abs(coin.x - player.x) < 32 &&
@@ -293,8 +279,8 @@
         }
       });
 
-      enemies = enemies.filter(e => e.x + EMOJI_SIZE > 0);
-      coins = coins.filter(c => c.x + EMOJI_SIZE > 0 && !c.collected);
+      enemies = enemies.filter(e => e.x + SMALL_SIZE > 0);
+      coins = coins.filter(c => c.x + SMALL_SIZE > 0 && !c.collected);
 
       speed = 4 + Math.floor(score / 10);
       scoreDisplay.innerText = `Puntos: ${score}`;
@@ -305,7 +291,7 @@
     setInterval(() => { if (!gameOver) spawnEnemy(); }, 1200);
     setInterval(() => { if (!gameOver) spawnCoin(); }, 1500);
 
-    // ✅ Prevenir zoom por doble tap
+    // prevenir zoom por doble tap
     let lastTouch = 0;
     document.addEventListener('touchstart', function(e) {
       const now = new Date().getTime();
