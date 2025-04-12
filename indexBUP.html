@@ -14,7 +14,7 @@
       font-family: sans-serif;
     }
     canvas {
-      display: none;
+      display: block;
       margin: auto;
       background: transparent;
     }
@@ -37,13 +37,10 @@
       text-align: center;
       display: none;
       z-index: 3;
-      background: rgba(255, 255, 255, 0.8);
-      padding: 20px;
-      border-radius: 12px;
     }
     #restartBtn {
       position: absolute;
-      top: calc(50% + 80px);
+      top: calc(50% + 60px);
       left: 50%;
       transform: translateX(-50%);
       padding: 10px 20px;
@@ -51,7 +48,7 @@
       background: #0af;
       color: white;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
       cursor: pointer;
       display: none;
       z-index: 4;
@@ -68,38 +65,7 @@
       border-radius: 30px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       border: none;
-      display: none;
       z-index: 5;
-    }
-    #welcomeScreen {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: #87CEFA;
-      color: #333;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      z-index: 10;
-    }
-    #welcomeScreen h1 {
-      font-size: 32px;
-      margin-bottom: 10px;
-    }
-    #highScoreDisplay {
-      font-size: 24px;
-      margin-bottom: 20px;
-    }
-    #startBtn {
-      padding: 14px 24px;
-      font-size: 20px;
-      background: #0af;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
     }
     #rotateWarning {
       display: none;
@@ -117,26 +83,20 @@
       z-index: 999;
       padding: 20px;
     }
+
     #gameOver {
-        background-color: #fff;
-        color: #0af;
-        text-align: center;
-        padding: 10px 40px;
-        border-radius: 8px;
-        border: 2px solid #00a5f0;
-      }
+      background-color: #fff;
+      color: #0af;
+      text-align: center;
+      padding: 10px 40px;
+      border-radius: 8px;
+      border: 2px solid #00a5f0;
+    }
   </style>
 </head>
-
 <body>
-  <div id="welcomeScreen">
-    <h1>🐿️ Ardilla Equilibrista</h1>
-    <div id="highScoreDisplay">Cargando puntaje más alto...</div>
-    <button id="startBtn">Jugar</button>
-  </div>
-
   <div id="score">Puntos: 0</div>
-  <div id="gameOver">🐶 ¡Juego terminado!<br/>Puntaje final: <span id="finalScore">0</span></div>
+  <div id="gameOver">🐶<br/>Game Over<br><span id="finalScore">0</span></div>
   <button id="restartBtn">Reintentar</button>
   <button id="touchBtn">TOCAR 🐿️</button>
   <div id="rotateWarning">Por favor gira tu dispositivo<br>para jugar en modo horizontal 🌰</div>
@@ -147,7 +107,6 @@
   <audio id="coinSound" src="coin.mp3"></audio>
 
   <script>
-    const base = 'http://chispudos.com/ardillas/';
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const scoreDisplay = document.getElementById('score');
@@ -156,10 +115,6 @@
     const finalScoreEl = document.getElementById('finalScore');
     const touchBtn = document.getElementById('touchBtn');
     const rotateWarning = document.getElementById('rotateWarning');
-
-    const welcomeScreen = document.getElementById('welcomeScreen');
-    const highScoreDisplay = document.getElementById('highScoreDisplay');
-    const startBtn = document.getElementById('startBtn');
 
     const bgm = document.getElementById('bgm');
     const loseSound = document.getElementById('loseSound');
@@ -170,7 +125,6 @@
     const COIN_SIZE = 40;
     let ROPE_Y, PLAYER_X;
     let score, speed, enemies, coins, gameOver, player;
-    let highScore = 0;
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
@@ -183,24 +137,6 @@
 
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
-
-    function showWelcomeScreen() {
-      canvas.style.display = 'none';
-      welcomeScreen.style.display = 'flex';
-      fetch(base + 'obtener_puntaje.php')
-        .then(res => res.json())
-        .then(data => {
-          highScore = data.highscore || 0;
-          highScoreDisplay.innerText = `Puntaje más alto: ${highScore}`;
-        });
-    }
-
-    startBtn.addEventListener('click', () => {
-      welcomeScreen.style.display = 'none';
-      canvas.style.display = 'block';
-      scoreDisplay.style.display = 'block';
-      init();
-    });
 
     function startSound() {
       if (!soundStarted) {
@@ -258,10 +194,7 @@
     canvas.addEventListener('touchstart', handleFlip);
     canvas.addEventListener('mousedown', handleFlip);
     touchBtn.addEventListener('click', handleFlip);
-
-    restartBtn.addEventListener('click', () => {
-      showWelcomeScreen();
-    });
+    restartBtn.addEventListener('click', () => init());
 
     function spawnEnemy() {
       const fromTop = Math.random() < 0.5;
@@ -316,14 +249,6 @@
       gameOverDisplay.style.display = 'block';
       restartBtn.style.display = 'block';
       touchBtn.style.display = 'none';
-
-      if (score > highScore) {
-        fetch(base + 'guardar_puntaje.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ score })
-        });
-      }
     }
 
     function updateGame() {
@@ -384,7 +309,7 @@
       lastTouch = now;
     }, { passive: false });
 
-    showWelcomeScreen();
+    init();
   </script>
 </body>
 </html>
