@@ -282,6 +282,17 @@
     setInterval(() => { if (!gameOver) spawnEnemy(); }, 1200);
     setInterval(() => { if (!gameOver) spawnCoin(); }, 1500);
 
+    let lastTouchTime = 0;
+
+    document.addEventListener('touchstart', function (e) {
+      const now = Date.now();
+      if (now - lastTouchTime <= 300) {
+        e.preventDefault(); // 🛑 Evita zoom por doble tap
+      }
+      lastTouchTime = now;
+    }, { passive: false });
+
+
     init();
   </script>
 </body>
