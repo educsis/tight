@@ -41,9 +41,25 @@
       padding: 20px;
       border-radius: 12px;
     }
+    #recordHolder {
+      font-size: 18px;
+      color: #333;
+      margin-top: 10px;
+    }
+    #nameInputContainer {
+      margin-top: 15px;
+    }
+    #nameInputContainer input {
+      padding: 10px;
+      font-size: 18px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      width: 80%;
+    }
     #restartBtn {
+      top: calc(50% + 220px);
       position: absolute;
-      top: calc(50% + 80px);
       left: 50%;
       transform: translateX(-50%);
       padding: 10px 20px;
@@ -83,6 +99,7 @@
       justify-content: center;
       text-align: center;
       z-index: 10;
+      padding: 20px;
     }
     #welcomeScreen h1 {
       font-size: 32px;
@@ -92,6 +109,10 @@
       font-size: 24px;
       margin-bottom: 20px;
     }
+    #topScores {
+      margin-bottom: 20px;
+      font-size: 18px;
+    }
     #startBtn {
       padding: 14px 24px;
       font-size: 20px;
@@ -100,6 +121,7 @@
       border: none;
       border-radius: 10px;
       cursor: pointer;
+      margin-bottom: 10px;
     }
     #rotateWarning {
       display: none;
@@ -110,281 +132,249 @@
       background: #222;
       color: white;
       font-size: 24px;
-      display: flex;
       align-items: center;
       justify-content: center;
       text-align: center;
       z-index: 999;
       padding: 20px;
     }
-    #gameOver {
-        background-color: #fff;
-        color: #0af;
-        text-align: center;
-        padding: 10px 40px;
-        border-radius: 8px;
-        border: 2px solid #00a5f0;
-      }
   </style>
 </head>
-
 <body>
   <div id="welcomeScreen">
     <h1>🐿️ Ardilla Equilibrista</h1>
     <div id="highScoreDisplay">Cargando puntaje más alto...</div>
+    <div id="topScores">Top 5 jugadores:</div>
     <button id="startBtn">Jugar</button>
   </div>
 
+  <div id="gameOver">
+    🐶 ¡Juego terminado!<br/>
+    Puntaje final: <span id="finalScore">0</span>
+    <div id="recordHolder"></div>
+    <div id="nameInputContainer">
+      <input id="nameInput" type="text" placeholder="Tu nombre" required />
+    </div>
+  </div>
+
   <div id="score">Puntos: 0</div>
-  <div id="gameOver">🐶 ¡Juego terminado!<br/>Puntaje final: <span id="finalScore">0</span></div>
-  <button id="restartBtn">Reintentar</button>
+  <button id="restartBtn" disabled>Guardar y Reintentar</button>
   <button id="touchBtn">TOCAR 🐿️</button>
   <div id="rotateWarning">Por favor gira tu dispositivo<br>para jugar en modo horizontal 🌰</div>
-  <canvas id="game"></canvas>
+  <canvas id="game" width="800" height="400"></canvas>
 
   <audio id="bgm" src="race.mp3" loop></audio>
   <audio id="loseSound" src="lose.mp3"></audio>
   <audio id="coinSound" src="coin.mp3"></audio>
 
   <script>
-    const base = 'http://chispudos.com/ardillas/';
     const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-    const scoreDisplay = document.getElementById('score');
-    const gameOverDisplay = document.getElementById('gameOver');
-    const restartBtn = document.getElementById('restartBtn');
-    const finalScoreEl = document.getElementById('finalScore');
-    const touchBtn = document.getElementById('touchBtn');
-    const rotateWarning = document.getElementById('rotateWarning');
+const ctx = canvas.getContext('2d');
+const scoreDisplay = document.getElementById('score');
+const gameOverDisplay = document.getElementById('gameOver');
+const finalScoreEl = document.getElementById('finalScore');
+const recordHolder = document.getElementById('recordHolder');
+const restartBtn = document.getElementById('restartBtn');
+const nameInput = document.getElementById('nameInput');
+const welcomeScreen = document.getElementById('welcomeScreen');
+const highScoreDisplay = document.getElementById('highScoreDisplay');
+const topScores = document.getElementById('topScores');
+const startBtn = document.getElementById('startBtn');
+const touchBtn = document.getElementById('touchBtn');
 
-    const welcomeScreen = document.getElementById('welcomeScreen');
-    const highScoreDisplay = document.getElementById('highScoreDisplay');
-    const startBtn = document.getElementById('startBtn');
+const bgm = document.getElementById('bgm');
+const loseSound = document.getElementById('loseSound');
+const coinSound = document.getElementById('coinSound');
 
-    const bgm = document.getElementById('bgm');
-    const loseSound = document.getElementById('loseSound');
-    const coinSound = document.getElementById('coinSound');
+let player, enemies = [], coins = [], gameOver = false, score = 0, speed = 4;
+let playerName = '';
+let highScoreData = { name: '---', score: 0 };
 
-    let soundStarted = false;
-    const EMOJI_SIZE = 64;
-    const COIN_SIZE = 40;
-    let ROPE_Y, PLAYER_X;
-    let score, speed, enemies, coins, gameOver, player;
-    let highScore = 0;
+async function fetchTopScores() {
+  const res = await fetch('http://ardillapunteo.test/obtener_top.php');
+  const list = await res.json();
+  topScores.innerHTML = `<strong>Top 5 jugadores:</strong><br>` + list.map(p => `${p.name}: ${p.score}`).join('<br>');
+  if (list[0]) {
+    highScoreData = list[0];
+    highScoreDisplay.innerText = `Récord: ${highScoreData.name} con ${highScoreData.score} pts`;
+  }
+}
 
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      ROPE_Y = canvas.height / 2;
-      PLAYER_X = canvas.width * 0.15;
-      rotateWarning.style.display =
-        window.innerHeight > window.innerWidth ? 'flex' : 'none';
-    }
+startBtn.addEventListener('click', () => {
+  welcomeScreen.style.display = 'none';
+  canvas.style.display = 'block';
+  scoreDisplay.style.display = 'block';
+  touchBtn.style.display = 'block';
+  init();
+});
 
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+function init() {
+  score = 0;
+  speed = 4;
+  enemies = [];
+  coins = [];
+  gameOver = false;
 
-    function showWelcomeScreen() {
-      canvas.style.display = 'none';
-      welcomeScreen.style.display = 'flex';
-      fetch(base + 'obtener_puntaje.php')
-        .then(res => res.json())
-        .then(data => {
-          highScore = data.highscore || 0;
-          highScoreDisplay.innerText = `Puntaje más alto: ${highScore}`;
-        });
-    }
-
-    startBtn.addEventListener('click', () => {
-      welcomeScreen.style.display = 'none';
-      canvas.style.display = 'block';
-      scoreDisplay.style.display = 'block';
-      init();
-    });
-
-    function startSound() {
-      if (!soundStarted) {
-        soundStarted = true;
-        bgm.currentTime = 0;
-        bgm.play();
-      }
-    }
-
-    function init() {
-      score = 0;
-      speed = 4;
-      enemies = [];
-      coins = [];
-      gameOver = false;
-
-      player = {
-        x: PLAYER_X,
-        flipped: false,
-        update() {
-          this.y = this.flipped
-            ? ROPE_Y + EMOJI_SIZE / 2
-            : ROPE_Y - EMOJI_SIZE / 2;
-        },
-        draw() {
-          this.update();
-          ctx.save();
-          ctx.translate(this.x, this.y);
-          ctx.scale(-1, this.flipped ? -1 : 1);
-          ctx.font = `${EMOJI_SIZE}px serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText("🐿️", 0, 0);
-          ctx.restore();
-        }
-      };
-
-      gameOverDisplay.style.display = 'none';
-      restartBtn.style.display = 'none';
-      touchBtn.style.display = 'block';
-      requestAnimationFrame(updateGame);
-    }
-
-    function handleFlip() {
-      startSound();
-      if (!gameOver) {
-        player.flipped = !player.flipped;
-      }
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.code === 'Space') handleFlip();
-    });
-
-    canvas.addEventListener('touchstart', handleFlip);
-    canvas.addEventListener('mousedown', handleFlip);
-    touchBtn.addEventListener('click', handleFlip);
-
-    restartBtn.addEventListener('click', () => {
-      showWelcomeScreen();
-    });
-
-    function spawnEnemy() {
-      const fromTop = Math.random() < 0.5;
-      enemies.push({
-        x: canvas.width,
-        y: fromTop ? ROPE_Y - EMOJI_SIZE : ROPE_Y + EMOJI_SIZE,
-        fromTop,
-        passed: false
-      });
-    }
-
-    function spawnCoin() {
-      const flipped = Math.random() < 0.5;
-      const y = flipped ? ROPE_Y + COIN_SIZE : ROPE_Y - COIN_SIZE;
-      const safeDistance = 80;
-      const tooClose = enemies.some(enemy =>
-        Math.abs(enemy.x - canvas.width) < safeDistance &&
-        Math.abs(enemy.y - y) < safeDistance
-      );
-      if (!tooClose) {
-        coins.push({
-          x: canvas.width,
-          y: y,
-          flipped,
-          collected: false
-        });
-      }
-    }
-
-    function drawEmoji(emoji, x, y, size) {
-      ctx.font = `${size}px serif`;
+  player = {
+    x: 100,
+    flipped: false,
+    update() {
+      this.y = this.flipped ? canvas.height / 2 + 32 : canvas.height / 2 - 32;
+    },
+    draw() {
+      this.update();
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.scale(-1, this.flipped ? -1 : 1);
+      ctx.font = `64px serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(emoji, x, y);
+      ctx.fillText("🐿️", 0, 0);
+      ctx.restore();
     }
+  };
 
-    function drawRope() {
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, ROPE_Y);
-      ctx.lineTo(canvas.width, ROPE_Y);
-      ctx.stroke();
+  requestAnimationFrame(updateGame);
+}
+
+function handleFlip() {
+  if (!gameOver) {
+    player.flipped = !player.flipped;
+  }
+}
+
+document.addEventListener('keydown', e => { if (e.code === 'Space') handleFlip(); });
+canvas.addEventListener('touchstart', handleFlip);
+canvas.addEventListener('mousedown', handleFlip);
+touchBtn.addEventListener('click', handleFlip);
+
+function spawnEnemy() {
+  const fromTop = Math.random() < 0.5;
+  enemies.push({
+    x: canvas.width,
+    y: fromTop ? canvas.height / 2 - 64 : canvas.height / 2 + 64,
+    fromTop,
+    passed: false
+  });
+}
+
+function spawnCoin() {
+  const flipped = Math.random() < 0.5;
+  const y = flipped ? canvas.height / 2 + 48 : canvas.height / 2 - 48;
+  coins.push({ x: canvas.width, y, flipped, collected: false });
+}
+
+function drawEmoji(emoji, x, y, size) {
+  ctx.font = `${size}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, x, y);
+}
+
+function drawRope() {
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height / 2);
+  ctx.lineTo(canvas.width, canvas.height / 2);
+  ctx.stroke();
+}
+
+function updateGame() {
+  if (gameOver) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawRope();
+  player.draw();
+
+  enemies.forEach(enemy => {
+    enemy.x -= speed;
+    drawEmoji("🐶", enemy.x, enemy.y, 64);
+    if (Math.abs(enemy.x - player.x) < 32 && ((enemy.fromTop && !player.flipped) || (!enemy.fromTop && player.flipped))) {
+      endGame();
     }
-
-    function endGame() {
-      gameOver = true;
-      bgm.pause();
-      loseSound.currentTime = 0;
-      loseSound.play();
-      finalScoreEl.innerText = score;
-      gameOverDisplay.style.display = 'block';
-      restartBtn.style.display = 'block';
-      touchBtn.style.display = 'none';
-
-      if (score > highScore) {
-        fetch(base + 'guardar_puntaje.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ score })
-        });
-      }
+    if (!enemy.passed && enemy.x + 64 < player.x) {
+      score += 1;
+      enemy.passed = true;
     }
+  });
 
-    function updateGame() {
-      if (gameOver) return;
-      ctx.fillStyle = '#87CEFA';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      drawRope();
-      player.draw();
-
-      enemies.forEach(enemy => {
-        enemy.x -= speed;
-        drawEmoji("🐶", enemy.x, enemy.y, EMOJI_SIZE);
-        if (
-          Math.abs(enemy.x - player.x) < 32 &&
-          ((enemy.fromTop && !player.flipped) || (!enemy.fromTop && player.flipped))
-        ) {
-          endGame();
-        }
-        if (!enemy.passed && enemy.x + EMOJI_SIZE < player.x) {
-          score += 1;
-          enemy.passed = true;
-        }
-      });
-
-      coins.forEach(coin => {
-        coin.x -= speed;
-        drawEmoji("🌰", coin.x, coin.y, COIN_SIZE);
-        if (
-          !coin.collected &&
-          Math.abs(coin.x - player.x) < 32 &&
-          ((coin.flipped && player.flipped) || (!coin.flipped && !player.flipped))
-        ) {
-          score += 5;
-          coin.collected = true;
-          coinSound.currentTime = 0;
-          coinSound.play();
-        }
-      });
-
-      enemies = enemies.filter(e => e.x + EMOJI_SIZE > 0);
-      coins = coins.filter(c => c.x + COIN_SIZE > 0 && !c.collected);
-
-      speed = 4 + Math.floor(score / 10);
-      scoreDisplay.innerText = `Puntos: ${score}`;
-
-      requestAnimationFrame(updateGame);
+  coins.forEach(coin => {
+    coin.x -= speed;
+    drawEmoji("🌰", coin.x, coin.y, 40);
+    if (!coin.collected && Math.abs(coin.x - player.x) < 32 && ((coin.flipped && player.flipped) || (!coin.flipped && !player.flipped))) {
+      score += 5;
+      coin.collected = true;
+      coinSound.currentTime = 0;
+      coinSound.play();
     }
+  });
 
-    setInterval(() => { if (!gameOver) spawnEnemy(); }, 1200);
-    setInterval(() => { if (!gameOver) spawnCoin(); }, 1500);
+  enemies = enemies.filter(e => e.x + 64 > 0);
+  coins = coins.filter(c => c.x + 40 > 0 && !c.collected);
 
-    let lastTouch = 0;
-    document.addEventListener('touchstart', function(e) {
-      const now = new Date().getTime();
-      if (now - lastTouch <= 300) {
-        e.preventDefault();
-      }
-      lastTouch = now;
-    }, { passive: false });
+  speed = 4 + Math.floor(score / 10);
+  scoreDisplay.innerText = `Puntos: ${score}`;
 
-    showWelcomeScreen();
+  requestAnimationFrame(updateGame);
+}
+
+function endGame() {
+  gameOver = true;
+  bgm.pause();
+  loseSound.currentTime = 0;
+  loseSound.play();
+  canvas.style.display = 'none';
+  scoreDisplay.style.display = 'none';
+  touchBtn.style.display = 'none';
+  finalScoreEl.innerText = score;
+  recordHolder.innerText = `🏆 Récord: ${highScoreData.name} (${highScoreData.score} pts)`;
+  gameOverDisplay.style.display = 'block';
+  restartBtn.style.display = 'block';
+
+  const saved = localStorage.getItem('playerName');
+  if (saved) {
+    nameInput.value = saved;
+    restartBtn.disabled = false;
+  }
+}
+
+restartBtn.addEventListener('click', async () => {
+  let name = nameInput.value.trim().toUpperCase();
+  if (!name) return;
+  localStorage.setItem('playerName', name);
+  const score = parseInt(finalScoreEl.textContent);
+
+  // Consultar puntaje existente del jugador
+  let existing = await fetch(`http://ardillapunteo.test/obtener_puntaje.php?name=${encodeURIComponent(name)}`)
+    .then(r => r.ok ? r.json() : null)
+    .catch(() => null);
+
+  if (!existing || score > existing.score) {
+    await fetch('http://ardillapunteo.test/guardar_puntaje.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, score })
+    });
+  }
+
+  location.reload();
+
+  fetch('http://ardillapunteo.test/guardar_puntaje.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, score })
+  }).then(() => location.reload());
+});
+
+nameInput.addEventListener('input', () => {
+  restartBtn.disabled = nameInput.value.trim().length === 0;
+});
+
+setInterval(() => { if (!gameOver) spawnEnemy(); }, 1200);
+setInterval(() => { if (!gameOver) spawnCoin(); }, 1500);
+
+fetchTopScores();
+    // (se incluirá a continuación en el siguiente paso)
   </script>
 </body>
 </html>
