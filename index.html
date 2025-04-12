@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
   <title>Unicornio Equilibrista</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -294,6 +295,20 @@
 
 
     init();
+
+    let lastTap = 0;
+
+document.addEventListener('touchend', function(e) {
+  const currentTime = new Date().getTime();
+  const tapLength = currentTime - lastTap;
+
+  if (tapLength < 350 && tapLength > 0) {
+    e.preventDefault(); // 🛑 Evita zoom por doble tap
+  }
+
+  lastTap = currentTime;
+}, { passive: false });
+
   </script>
 </body>
 </html>
