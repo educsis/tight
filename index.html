@@ -168,7 +168,8 @@
   <audio id="coinSound" src="coin.mp3"></audio>
 
   <script>
-    const canvas = document.getElementById('game');
+const base = 'http://chispudos.com/ardillas/';
+const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const scoreDisplay = document.getElementById('score');
 const gameOverDisplay = document.getElementById('gameOver');
@@ -191,7 +192,7 @@ let playerName = '';
 let highScoreData = { name: '---', score: 0 };
 
 async function fetchTopScores() {
-  const res = await fetch('http://ardillapunteo.test/obtener_top.php');
+  const res = await fetch(base + 'obtener_top.php');
   const list = await res.json();
   topScores.innerHTML = `<strong>Top 5 jugadores:</strong><br>` + list.map(p => `${p.name}: ${p.score}`).join('<br>');
   if (list[0]) {
@@ -345,12 +346,12 @@ restartBtn.addEventListener('click', async () => {
   const score = parseInt(finalScoreEl.textContent);
 
   // Consultar puntaje existente del jugador
-  let existing = await fetch(`http://ardillapunteo.test/obtener_puntaje.php?name=${encodeURIComponent(name)}`)
+  let existing = await fetch(base + `obtener_puntaje.php?name=${encodeURIComponent(name)}`)
     .then(r => r.ok ? r.json() : null)
     .catch(() => null);
 
   if (!existing || score > existing.score) {
-    await fetch('http://ardillapunteo.test/guardar_puntaje.php', {
+    await fetch(base + 'guardar_puntaje.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, score })
@@ -359,7 +360,7 @@ restartBtn.addEventListener('click', async () => {
 
   location.reload();
 
-  fetch('http://ardillapunteo.test/guardar_puntaje.php', {
+  fetch(base + 'guardar_puntaje.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, score })
