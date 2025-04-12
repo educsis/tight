@@ -2,14 +2,16 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Unicornio Equilibrista</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
+    html, body {
       background: #87CEFA;
       font-family: sans-serif;
       color: #fff;
       overflow: hidden;
+      height: 100%;
     }
     canvas {
       background: transparent;
@@ -55,9 +57,9 @@
 </head>
 <body>
   <div id="score">Puntos: 0</div>
-  <div id="gameOver">💀 ¡Juego terminado!<br/>Puntaje final: <span id="finalScore">0</span></div>
+  <div id="gameOver">💀<br/><span id="finalScore">0</span></div>
   <button id="restartBtn">Reintentar</button>
-  <canvas id="game" width="800" height="400"></canvas>
+  <canvas id="game"></canvas>
 
   <audio id="bgm" src="race.mp3" loop></audio>
   <audio id="loseSound" src="lose.mp3"></audio>
@@ -66,6 +68,7 @@
   <script>
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
+
     const scoreDisplay = document.getElementById('score');
     const gameOverDisplay = document.getElementById('gameOver');
     const restartBtn = document.getElementById('restartBtn');
@@ -76,11 +79,21 @@
     const coinSound = document.getElementById('coinSound');
     let soundStarted = false;
 
-    const ROPE_Y = canvas.height / 2;
-    const PLAYER_X = 100;
     const EMOJI_SIZE = 32;
+    let ROPE_Y;
+    let PLAYER_X;
 
     let score, speed, enemies, coins, gameOver, player;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      ROPE_Y = canvas.height / 2;
+      PLAYER_X = canvas.width * 0.15;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
     function startSound() {
       if (!soundStarted) {
@@ -119,13 +132,20 @@
       requestAnimationFrame(updateGame);
     }
 
-    document.addEventListener('keydown', (e) => {
+    function handleFlip() {
       startSound();
-      if (e.code === 'Space' && !gameOver) {
+      if (!gameOver) {
         player.flipped = !player.flipped;
         player.update();
       }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') handleFlip();
     });
+
+    canvas.addEventListener('touchstart', handleFlip);
+    canvas.addEventListener('mousedown', handleFlip);
 
     restartBtn.addEventListener('click', () => {
       init();
