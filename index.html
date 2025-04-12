@@ -2,20 +2,24 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Unicornio Equilibrista</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
-      background: #87CEFA;
-      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
       overflow: hidden;
       height: 100%;
+      background: #87CEFA;
+      font-family: sans-serif;
     }
+
     canvas {
       display: block;
       margin: auto;
+      background: transparent;
     }
+
     #score {
       position: absolute;
       top: 10px;
@@ -23,8 +27,9 @@
       transform: translateX(-50%);
       font-size: 24px;
       font-weight: bold;
-      z-index: 1;
+      z-index: 2;
     }
+
     #gameOver {
       position: absolute;
       top: 50%;
@@ -34,8 +39,9 @@
       color: #f55;
       text-align: center;
       display: none;
-      z-index: 2;
+      z-index: 3;
     }
+
     #restartBtn {
       position: absolute;
       top: calc(50% + 60px);
@@ -49,8 +55,9 @@
       border-radius: 8px;
       cursor: pointer;
       display: none;
-      z-index: 3;
+      z-index: 4;
     }
+
     #touchBtn {
       position: absolute;
       bottom: 20px;
@@ -63,8 +70,9 @@
       border-radius: 30px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       border: none;
-      z-index: 4;
+      z-index: 5;
     }
+
     #rotateWarning {
       display: none;
       position: fixed;
@@ -84,6 +92,7 @@
   </style>
 </head>
 <body>
+
   <div id="score">Puntos: 0</div>
   <div id="gameOver">💀 ¡Juego terminado!<br/>Puntaje final: <span id="finalScore">0</span></div>
   <button id="restartBtn">Reintentar</button>
@@ -108,12 +117,10 @@
     const bgm = document.getElementById('bgm');
     const loseSound = document.getElementById('loseSound');
     const coinSound = document.getElementById('coinSound');
+
     let soundStarted = false;
-
     const EMOJI_SIZE = 64;
-    let ROPE_Y;
-    let PLAYER_X;
-
+    let ROPE_Y, PLAYER_X;
     let score, speed, enemies, coins, gameOver, player;
 
     function resizeCanvas() {
@@ -122,12 +129,8 @@
       ROPE_Y = canvas.height / 2;
       PLAYER_X = canvas.width * 0.15;
 
-      // Mostrar aviso si está en vertical
-      if (window.innerHeight > window.innerWidth) {
-        rotateWarning.style.display = 'flex';
-      } else {
-        rotateWarning.style.display = 'none';
-      }
+      rotateWarning.style.display =
+        window.innerHeight > window.innerWidth ? 'flex' : 'none';
     }
 
     window.addEventListener('resize', resizeCanvas);
@@ -158,7 +161,10 @@
         },
         draw() {
           this.update();
-          drawEmoji("🦄", this.x, this.y, EMOJI_SIZE);
+          ctx.font = `${EMOJI_SIZE}px serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText("🦄", this.x, this.y);
         }
       };
 
@@ -295,15 +301,14 @@
     setInterval(() => { if (!gameOver) spawnEnemy(); }, 1200);
     setInterval(() => { if (!gameOver) spawnCoin(); }, 1500);
 
-    // 🔒 Evitar doble tap zoom
-    let lastTap = 0;
-    document.addEventListener('touchend', function(e) {
-      const currentTime = new Date().getTime();
-      const tapLength = currentTime - lastTap;
-      if (tapLength < 350 && tapLength > 0) {
+    // ✅ Bloquear doble tap zoom real
+    let lastTouch = 0;
+    document.addEventListener('touchstart', function(e) {
+      const now = new Date().getTime();
+      if (now - lastTouch <= 300) {
         e.preventDefault();
       }
-      lastTap = currentTime;
+      lastTouch = now;
     }, { passive: false });
 
     init();
