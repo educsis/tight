@@ -83,11 +83,20 @@
       z-index: 999;
       padding: 20px;
     }
+
+    #gameOver {
+      background-color: #fff;
+      color: #0af;
+      text-align: center;
+      padding: 10px 40px;
+      border-radius: 8px;
+      border: 2px solid #00a5f0;
+    }
   </style>
 </head>
 <body>
   <div id="score">Puntos: 0</div>
-  <div id="gameOver">🐶<br/><span id="finalScore">0</span></div>
+  <div id="gameOver">🐶<br/>Game Over<br><span id="finalScore">0</span></div>
   <button id="restartBtn">Reintentar</button>
   <button id="touchBtn">TOCAR 🐿️</button>
   <div id="rotateWarning">Por favor gira tu dispositivo<br>para jugar en modo horizontal 🌰</div>
@@ -113,7 +122,7 @@
 
     let soundStarted = false;
     const EMOJI_SIZE = 64;
-    const SMALL_SIZE = 48; // nueces y enemigos
+    const COIN_SIZE = 40;
     let ROPE_Y, PLAYER_X;
     let score, speed, enemies, coins, gameOver, player;
 
@@ -156,7 +165,7 @@
           this.update();
           ctx.save();
           ctx.translate(this.x, this.y);
-          ctx.scale(-1, this.flipped ? -1 : 1); // horizontal fijo + flip vertical
+          ctx.scale(-1, this.flipped ? -1 : 1);
           ctx.font = `${EMOJI_SIZE}px serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -191,7 +200,7 @@
       const fromTop = Math.random() < 0.5;
       enemies.push({
         x: canvas.width,
-        y: fromTop ? ROPE_Y - SMALL_SIZE : ROPE_Y + SMALL_SIZE,
+        y: fromTop ? ROPE_Y - EMOJI_SIZE : ROPE_Y + EMOJI_SIZE,
         fromTop,
         passed: false
       });
@@ -199,7 +208,7 @@
 
     function spawnCoin() {
       const flipped = Math.random() < 0.5;
-      const y = flipped ? ROPE_Y + SMALL_SIZE : ROPE_Y - SMALL_SIZE;
+      const y = flipped ? ROPE_Y + COIN_SIZE : ROPE_Y - COIN_SIZE;
       const safeDistance = 80;
       const tooClose = enemies.some(enemy =>
         Math.abs(enemy.x - canvas.width) < safeDistance &&
@@ -251,14 +260,14 @@
 
       enemies.forEach(enemy => {
         enemy.x -= speed;
-        drawEmoji("🐶", enemy.x, enemy.y, SMALL_SIZE);
+        drawEmoji("🐶", enemy.x, enemy.y, EMOJI_SIZE);
         if (
           Math.abs(enemy.x - player.x) < 32 &&
           ((enemy.fromTop && !player.flipped) || (!enemy.fromTop && player.flipped))
         ) {
           endGame();
         }
-        if (!enemy.passed && enemy.x + SMALL_SIZE < player.x) {
+        if (!enemy.passed && enemy.x + EMOJI_SIZE < player.x) {
           score += 1;
           enemy.passed = true;
         }
@@ -266,7 +275,7 @@
 
       coins.forEach(coin => {
         coin.x -= speed;
-        drawEmoji("🌰", coin.x, coin.y, SMALL_SIZE);
+        drawEmoji("🌰", coin.x, coin.y, COIN_SIZE);
         if (
           !coin.collected &&
           Math.abs(coin.x - player.x) < 32 &&
@@ -279,8 +288,8 @@
         }
       });
 
-      enemies = enemies.filter(e => e.x + SMALL_SIZE > 0);
-      coins = coins.filter(c => c.x + SMALL_SIZE > 0 && !c.collected);
+      enemies = enemies.filter(e => e.x + EMOJI_SIZE > 0);
+      coins = coins.filter(c => c.x + COIN_SIZE > 0 && !c.collected);
 
       speed = 4 + Math.floor(score / 10);
       scoreDisplay.innerText = `Puntos: ${score}`;
@@ -291,7 +300,6 @@
     setInterval(() => { if (!gameOver) spawnEnemy(); }, 1200);
     setInterval(() => { if (!gameOver) spawnCoin(); }, 1500);
 
-    // prevenir zoom por doble tap
     let lastTouch = 0;
     document.addEventListener('touchstart', function(e) {
       const now = new Date().getTime();
