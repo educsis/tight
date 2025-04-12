@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Unicornio Equilibrista</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #87CEFA;
+      font-family: sans-serif;
+      color: #fff;
+      overflow: hidden;
+    }
+    canvas {
+      background: transparent;
+      display: block;
+      margin: auto;
+    }
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+      font-weight: bold;
+      z-index: 1;
+    }
+    #gameOver {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 32px;
+      color: #f55;
+      text-align: center;
+      display: none;
+      z-index: 2;
+    }
+    #restartBtn {
+      position: absolute;
+      top: calc(50% + 60px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #0af;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: none;
+      z-index: 3;
+    }
+  </style>
+</head>
+<body>
+  <div id="score">Puntos: 0</div>
+  <div id="gameOver">💀 ¡Juego terminado!<br/>Puntaje final: <span id="finalScore">0</span></div>
+  <button id="restartBtn">Reintentar</button>
+  <canvas id="game" width="800" height="400"></canvas>
+
+  <audio id="bgm" src="race.mp3" loop></audio>
+  <audio id="loseSound" src="lose.mp3"></audio>
+  <audio id="coinSound" src="coin.mp3"></audio>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreDisplay = document.getElementById('score');
+    const gameOverDisplay = document.getElementById('gameOver');
+    const restartBtn = document.getElementById('restartBtn');
+    const finalScoreEl = document.getElementById('finalScore');
+
+    const bgm = document.getElementById('bgm');
+    const loseSound = document.getElementById('loseSound');
+    const coinSound = document.getElementById('coinSound');
+    let soundStarted = false;
+
+    const ROPE_Y = canvas.height / 2;
+    const PLAYER_X = 100;
+    const EMOJI_SIZE = 32;
+
+    let score, speed, enemies, coins, gameOver, player;
+
+    function startSound() {
+      if (!soundStarted) {
+        soundStarted = true;
+        bgm.currentTime = 0;
+        bgm.play();
+      }
+    }
+
+    function init() {
+      score = 0;
+      speed = 4;
+      enemies = [];
+      coins = [];
+      gameOver = false;
+
+      player = {
+        x: PLAYER_X,
+        y: ROPE_Y - EMOJI_SIZE / 2,
+        flipped: false,
+
+        update() {
+          this.y = this.flipped
+            ? ROPE_Y + EMOJI_SIZE / 2
+            : ROPE_Y - EMOJI_SIZE / 2;
+        },
+
+        draw() {
+          drawEmoji("🦄", this.x, this.y, EMOJI_SIZE);
+        }
+      };
+
+      player.update();
+      gameOverDisplay.style.display = 'none';
+      restartBtn.style.display = 'none';
+      requestAnimationFrame(updateGame);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      startSound();
+      if (e.code === 'Space' && !gameOver) {
+        player.flipped = !player.flipped;
+        player.update();
+      }
+    });
+
+    restartBtn.addEventListener('click', () => {
+      init();
+    });
+
+    function spawnEnemy() {
+      const fromTop = Math.random() < 0.5;
+      enemies.push({
+        x: canvas.width,
+        y: fromTop ? ROPE_Y - EMOJI_SIZE : ROPE_Y + EMOJI_SIZE,
+        fromTop,
+        passed: false
+      });
+    }
+
+    function spawnCoin() {
+      const flipped = Math.random() < 0.5;
+      const y = flipped ? ROPE_Y + EMOJI_SIZE : ROPE_Y - EMOJI_SIZE;
+
+      const safeDistance = 80;
+      const tooClose = enemies.some(enemy =>
+        Math.abs(enemy.x - canvas.width) < safeDistance &&
+        Math.abs(enemy.y - y) < safeDistance
+      );
+
+      if (!tooClose) {
+        coins.push({
+          x: canvas.width,
+          y: y,
+          flipped,
+          collected: false
+        });
+      }
+    }
+
+    function drawEmoji(emoji, x, y, size) {
+      ctx.font = `${size}px serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(emoji, x, y);
+    }
+
+    function drawRope() {
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, ROPE_Y);
+      ctx.lineTo(canvas.width, ROPE_Y);
+      ctx.stroke();
+    }
+
+    function endGame() {
+      gameOver = true;
+      bgm.pause();
+      loseSound.currentTime = 0;
+      loseSound.play();
+      finalScoreEl.innerText = score;
+      gameOverDisplay.style.display = 'block';
+      restartBtn.style.display = 'block';
+    }
+
+    function updateGame() {
+      if (gameOver) return;
+
+      ctx.fillStyle = '#87CEFA';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      drawRope();
+      player.draw();
+
+      enemies.forEach(enemy => {
+        enemy.x -= speed;
+        drawEmoji("💀", enemy.x, enemy.y, EMOJI_SIZE);
+
+        if (
+          Math.abs(enemy.x - player.x) < 28 &&
+          ((enemy.fromTop && !player.flipped) || (!enemy.fromTop && player.flipped))
+        ) {
+          endGame();
+        }
+
+        if (!enemy.passed && enemy.x + EMOJI_SIZE < player.x) {
+          score += 1;
+          enemy.passed = true;
+        }
+      });
+
+      coins.forEach(coin => {
+        coin.x -= speed;
+        drawEmoji("⭐", coin.x, coin.y, EMOJI_SIZE);
+
+        if (
+          !coin.collected &&
+          Math.abs(coin.x - player.x) < 28 &&
+          ((coin.flipped && player.flipped) || (!coin.flipped && !player.flipped))
+        ) {
+          score += 5;
+          coin.collected = true;
+          coinSound.currentTime = 0;
+          coinSound.play();
+        }
+      });
+
+      enemies = enemies.filter(e => e.x + EMOJI_SIZE > 0);
+      coins = coins.filter(c => c.x + EMOJI_SIZE > 0 && !c.collected);
+
+      speed = 4 + Math.floor(score / 10);
+      scoreDisplay.innerText = `Puntos: ${score}`;
+
+      requestAnimationFrame(updateGame);
+    }
+
+    setInterval(() => { if (!gameOver) spawnEnemy(); }, 1200);
+    setInterval(() => { if (!gameOver) spawnCoin(); }, 1500);
+
+    init();
+  </script>
+</body>
+</html>
