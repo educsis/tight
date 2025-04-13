@@ -111,7 +111,14 @@
     }
     #topScores {
       margin-bottom: 20px;
-      font-size: 18px;
+      font-size: 14px;
+    }
+    .players {
+        margin: 1px;
+        border: 1px solid #0af;
+        width: 200px;
+        border-radius: 3px;
+        padding: 4px 10px;
     }
     #startBtn {
       padding: 14px 24px;
@@ -138,12 +145,30 @@
       z-index: 999;
       padding: 20px;
     }
+
+    #rotateWarning {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #222;
+        color: white;
+        font-size: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        z-index: 999;
+        padding: 20px;
+      }
   </style>
 </head>
 <body>
   <div id="welcomeScreen">
     <h1>🐿️ Ardilla Equilibrista</h1>
-    <div id="highScoreDisplay">Cargando puntaje más alto...</div>
+    <!-- <div id="highScoreDisplay">Cargando puntaje más alto...</div> -->
     <div id="topScores">Top 5 jugadores:</div>
     <button id="startBtn">Jugar</button>
   </div>
@@ -195,12 +220,33 @@ let highScoreData = { name: '---', score: 0 };
 async function fetchTopScores() {
   const res = await fetch(base + 'obtener_top.php');
   const list = await res.json();
-  topScores.innerHTML = `<strong>Top 5 jugadores:</strong><br>` + list.map(p => `${p.name}: ${p.score}`).join('<br>');
+  //topScores.innerHTML = `<h2>Top 5</h2>` + list.map(p => `<p class="players">${p.name}: ${p.score}</p>`).join('');
+  topScores.innerHTML = list.map(p => `<p class="players">${p.name}: ${p.score}</p>`).join('');
   if (list[0]) {
     highScoreData = list[0];
-    highScoreDisplay.innerText = `Récord: ${highScoreData.name} con ${highScoreData.score} pts`;
+    //highScoreDisplay.innerText = `Récord: ${highScoreData.name} con ${highScoreData.score} pts`;
   }
 }
+
+function checkOrientation() {
+    const rotateWarning = document.getElementById('rotateWarning');
+    const elementsToBlock = [
+      document.getElementById('welcomeScreen'),
+      document.getElementById('gameOver'),
+      document.getElementById('game'),
+      document.getElementById('score'),
+      document.getElementById('touchBtn')
+    ];
+    const isPortrait = window.innerHeight > window.innerWidth;
+    rotateWarning.style.display = isPortrait ? 'flex' : 'none';
+    elementsToBlock.forEach(el => {
+      if (el) el.style.display = isPortrait ? 'none' : '';
+    });
+  }
+  
+  window.addEventListener('resize', checkOrientation);
+  window.addEventListener('orientationchange', checkOrientation);
+  window.addEventListener('load', checkOrientation);
 
 startBtn.addEventListener('click', () => {
   welcomeScreen.style.display = 'none';
